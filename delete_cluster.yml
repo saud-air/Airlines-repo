@@ -6,20 +6,19 @@ on:
       workspace_url:
         description: 'Workspace URL'
         required: true
-      workspace_name:
-        description: 'Workspace name'
+      cluster_url:
+        description: 'Cluster URL'
         required: true
       cluster_name:
         description: 'Cluster name'
         required: true
-      cluster_id:
-        description: 'Cluster id'
-        required: true
 
 env:
-  # Reference repository secrets or environment variables here as examples
-  API_TOKEN: ${{ secrets.API_TOKEN }}
-  OTHER_CRED: ${{ vars.OTHER_CRED }}
+  # Azure Authentication - Reference secrets and variables
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 jobs:
   delete:
@@ -28,23 +27,38 @@ jobs:
       - name: Print inputs (debug)
         run: |
           echo "Workspace URL: ${{ github.event.inputs.workspace_url }}"
-          echo "Workspace name: ${{ github.event.inputs.workspace_name }}"
+          echo "Cluster URL: ${{ github.event.inputs.cluster_url }}"
           echo "Cluster name: ${{ github.event.inputs.cluster_name }}"
-          echo "Cluster id: ${{ github.event.inputs.cluster_id }}"
-          if [ -n "${API_TOKEN}" ]; then echo "API_TOKEN is set"; else echo "API_TOKEN is not set"; fi
+          if [ -n "${AZURE_CLIENT_ID}" ]; then echo "Azure credentials are set"; else echo "Azure credentials are not set"; fi
 
-      - name: Delete cluster via API
+      - name: Azure CLI login
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -e
+          echo "Authenticating with Azure..."
+          az login --service-principal \
+            -u "${AZURE_CLIENT_ID}" \
+            -p "${AZURE_CLIENT_SECRET}" \
+            --tenant "${AZURE_TENANT_ID}"
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          echo "Azure authentication successful"
+
+      - name: Delete cluster
         env:
           WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
-          WORKSPACE_NAME: ${{ github.event.inputs.workspace_name }}
+          CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
           CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
-          CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
-          API_TOKEN: ${{ secrets.API_TOKEN }}
-          OTHER_CRED: ${{ vars.OTHER_CRED }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
-          # Example HTTP request — adapt endpoint and auth as needed for your provider
           set -e
-          echo "Deleting cluster $CLUSTER_NAME ($CLUSTER_ID) in workspace $WORKSPACE_NAME"
-          curl -sS -X DELETE \
-            -H "Authorization: Bearer $API_TOKEN" \
-            "${WORKSPACE_URL%/}/api/v1/workspaces/${WORKSPACE_NAME}/clusters/${CLUSTER_ID}"
+          echo "Deleting cluster: $CLUSTER_NAME"
+          echo "Workspace URL: $WORKSPACE_URL"
+          echo "Cluster URL: $CLUSTER_URL"
+          
+          # Add your cluster deletion command here
+          # Example using Azure CLI:
+          # az container delete --resource-group <rg-name> --name $CLUSTER_NAME --yes
