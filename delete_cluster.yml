@@ -1,0 +1,64 @@
+name: Delete Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace_url:
+        description: 'Workspace URL'
+        required: true
+      cluster_url:
+        description: 'Cluster URL'
+        required: true
+      cluster_name:
+        description: 'Cluster name'
+        required: true
+
+env:
+  # Azure Authentication - Reference secrets and variables
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print inputs (debug)
+        run: |
+          echo "Workspace URL: ${{ github.event.inputs.workspace_url }}"
+          echo "Cluster URL: ${{ github.event.inputs.cluster_url }}"
+          echo "Cluster name: ${{ github.event.inputs.cluster_name }}"
+          if [ -n "${AZURE_CLIENT_ID}" ]; then echo "Azure credentials are set"; else echo "Azure credentials are not set"; fi
+
+      - name: Azure CLI login
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -e
+          echo "Authenticating with Azure..."
+          az login --service-principal \
+            -u "${AZURE_CLIENT_ID}" \
+            -p "${AZURE_CLIENT_SECRET}" \
+            --tenant "${AZURE_TENANT_ID}"
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          echo "Azure authentication successful"
+
+      - name: Delete cluster
+        env:
+          WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
+          CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
+          CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -e
+          echo "Deleting cluster: $CLUSTER_NAME"
+          echo "Workspace URL: $WORKSPACE_URL"
+          echo "Cluster URL: $CLUSTER_URL"
+          
+          # Add your cluster deletion command here
+          # Example using Azure CLI:
+          # az container delete --resource-group <rg-name> --name $CLUSTER_NAME --yes
