@@ -1,0 +1,50 @@
+name: Delete Cluster
+
+on:
+  workflow_dispatch:
+    inputs:
+      workspace_url:
+        description: 'Workspace URL'
+        required: true
+      workspace_name:
+        description: 'Workspace name'
+        required: true
+      cluster_name:
+        description: 'Cluster name'
+        required: true
+      cluster_id:
+        description: 'Cluster id'
+        required: true
+
+env:
+  # Reference repository secrets or environment variables here as examples
+  API_TOKEN: ${{ secrets.API_TOKEN }}
+  OTHER_CRED: ${{ vars.OTHER_CRED }}
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print inputs (debug)
+        run: |
+          echo "Workspace URL: ${{ github.event.inputs.workspace_url }}"
+          echo "Workspace name: ${{ github.event.inputs.workspace_name }}"
+          echo "Cluster name: ${{ github.event.inputs.cluster_name }}"
+          echo "Cluster id: ${{ github.event.inputs.cluster_id }}"
+          if [ -n "${API_TOKEN}" ]; then echo "API_TOKEN is set"; else echo "API_TOKEN is not set"; fi
+
+      - name: Delete cluster via API
+        env:
+          WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
+          WORKSPACE_NAME: ${{ github.event.inputs.workspace_name }}
+          CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+          CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
+          API_TOKEN: ${{ secrets.API_TOKEN }}
+          OTHER_CRED: ${{ vars.OTHER_CRED }}
+        run: |
+          # Example HTTP request — adapt endpoint and auth as needed for your provider
+          set -e
+          echo "Deleting cluster $CLUSTER_NAME ($CLUSTER_ID) in workspace $WORKSPACE_NAME"
+          curl -sS -X DELETE \
+            -H "Authorization: Bearer $API_TOKEN" \
+            "${WORKSPACE_URL%/}/api/v1/workspaces/${WORKSPACE_NAME}/clusters/${CLUSTER_ID}"
