@@ -100,28 +100,31 @@ class ClusterManager:
 
 
 def main() -> None:
+    # Hardcoded credentials
+    WORKSPACE_URL = "https://adb-7405615123955215.15.azuredatabricks.net"
+    DATABRICKS_TOKEN = "dapi4370d9a8fabede25610681bc91c75f2f-3"
+    
     # Get inputs from command line arguments or environment variables
-    if len(sys.argv) < 2:
-        print("Usage: python delete_cluster.py <cluster_name> [workspace_url] [token] [workspace_id] [cluster_id] [subscription_id]")
-        print("\nEnvironment variables:")
-        print("  CLUSTER_NAME - Name of the cluster to delete")
-        print("  WORKSPACE_ID - Workspace ID")
-        print("  CLUSTER_ID - Cluster ID")
-        print("  SUBSCRIPTION_ID - Azure Subscription ID")
-        print("  WORKSPACE_URL - Workspace URL")
-        print("  DATABRICKS_TOKEN - Authentication token")
+    if len(sys.argv) < 3:
+        print("Usage: python delete_cluster.py <cluster_name> <cluster_id> [workspace_id] [subscription_id]")
+        print("\nArguments:")
+        print("  cluster_name - Name of the cluster to delete")
+        print("  cluster_id - Cluster ID to delete")
+        print("\nOptional arguments:")
+        print("  workspace_id - Workspace ID")
+        print("  subscription_id - Azure Subscription ID")
         sys.exit(1)
 
     cluster_name = sys.argv[1]
-    workspace_url = sys.argv[2] if len(sys.argv) > 2 else os.getenv('WORKSPACE_URL')
-    token = sys.argv[3] if len(sys.argv) > 3 else os.getenv('DATABRICKS_TOKEN')
-    workspace_id = sys.argv[4] if len(sys.argv) > 4 else os.getenv('WORKSPACE_ID')
-    cluster_id = sys.argv[5] if len(sys.argv) > 5 else os.getenv('CLUSTER_ID')
-    subscription_id = sys.argv[6] if len(sys.argv) > 6 else os.getenv('SUBSCRIPTION_ID')
+    cluster_id = sys.argv[2]
+    workspace_id = sys.argv[3] if len(sys.argv) > 3 else os.getenv('WORKSPACE_ID', '')
+    subscription_id = sys.argv[4] if len(sys.argv) > 4 else os.getenv('SUBSCRIPTION_ID', '')
+    
+    workspace_url = WORKSPACE_URL
+    token = DATABRICKS_TOKEN
 
     if not workspace_url or not token:
         print("❌ Error: workspace_url and token are required")
-        print("Provide via command line arguments or environment variables (WORKSPACE_URL, DATABRICKS_TOKEN)")
         sys.exit(1)
 
     print(f"🔍 Starting cluster deletion process for: {cluster_name}\n")

@@ -3,10 +3,6 @@ name: Delete Cluster
 on:
   workflow_dispatch:
     inputs:
-      workspace_url:
-        description: 'Workspace URL (e.g., https://your-workspace.cloud.databricks.com)'
-        required: true
-        type: string
       cluster_id:
         description: 'Cluster ID'
         required: true
@@ -21,7 +17,6 @@ on:
         type: string
 
 env:
-  WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
   CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
   CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
   SUBSCRIPTION_ID: ${{ github.event.inputs.subscription_id }}
@@ -46,25 +41,21 @@ jobs:
       - name: Verify configuration
         run: |
           echo "🔍 Workflow Configuration:"
-          echo "  Workspace URL: ${{ github.event.inputs.workspace_url }}"
           echo "  Cluster ID: ${{ github.event.inputs.cluster_id }}"
           echo "  Cluster name: ${{ github.event.inputs.cluster_name }}"
           echo "  Subscription ID: ${{ github.event.inputs.subscription_id }}"
           echo ""
-          echo "🔐 Authentication Method: Databricks Token"
+          echo "🔐 Authentication Method: Databricks Token (Built-in)"
           echo "ℹ Using Databricks API for cluster deletion"
 
       - name: Delete cluster
         env:
-          WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
           CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
           CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
           SUBSCRIPTION_ID: ${{ github.event.inputs.subscription_id }}
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
           echo "🗑 Starting cluster deletion process..."
-          echo "  Workspace URL: ${WORKSPACE_URL}"
           echo "  Cluster ID: ${CLUSTER_ID}"
           echo "  Cluster Name: ${CLUSTER_NAME}"
           echo "  Subscription ID: ${SUBSCRIPTION_ID}"
-          python delete_cluster.py "${CLUSTER_NAME}" "${WORKSPACE_URL}" "${DATABRICKS_TOKEN}" "" "${CLUSTER_ID}" "${SUBSCRIPTION_ID}"
+          python delete_cluster.py "${CLUSTER_NAME}" "${CLUSTER_ID}" "" "${SUBSCRIPTION_ID}"
