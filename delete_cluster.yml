@@ -3,12 +3,12 @@ name: Delete Cluster
 on:
   workflow_dispatch:
     inputs:
-      workspace_url:
-        description: 'Workspace URL (e.g., https://workspace.azure.com)'
+      workspace_id:
+        description: 'Workspace ID'
         required: true
         type: string
-      cluster_url:
-        description: 'Cluster URL (e.g., https://cluster.azure.com)'
+      cluster_id:
+        description: 'Cluster ID'
         required: true
         type: string
       cluster_name:
@@ -22,8 +22,8 @@ env:
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
-  CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
+  WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+  CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
   CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
 
 jobs:
@@ -46,8 +46,8 @@ jobs:
       - name: Print workflow inputs (debug)
         run: |
           echo "🔍 Workflow Inputs:"
-          echo "  Workspace URL: ${{ github.event.inputs.workspace_url }}"
-          echo "  Cluster URL: ${{ github.event.inputs.cluster_url }}"
+          echo "  Workspace ID: ${{ github.event.inputs.workspace_id }}"
+          echo "  Cluster ID: ${{ github.event.inputs.cluster_id }}"
           echo "  Cluster name: ${{ github.event.inputs.cluster_name }}"
           echo ""
           echo "🔐 Azure Authentication Status:"
@@ -71,12 +71,14 @@ jobs:
 
       - name: Delete cluster
         env:
-          WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
-          CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
+          WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+          CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
           CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WORKSPACE_URL: ${{ secrets.WORKSPACE_URL }}
         run: |
           echo "🗑 Starting cluster deletion process..."
-          python delete_cluster.py "${{ github.event.inputs.cluster_name }}" \
-            "${{ github.event.inputs.workspace_url }}" \
-            "${{ secrets.DATABRICKS_TOKEN }}"
+          echo "  Workspace ID: ${WORKSPACE_ID}"
+          echo "  Cluster ID: ${CLUSTER_ID}"
+          echo "  Cluster Name: ${CLUSTER_NAME}"
+          python delete_cluster.py "${CLUSTER_NAME}" "${WORKSPACE_URL}" "${DATABRICKS_TOKEN}"
