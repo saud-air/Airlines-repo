@@ -4,14 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       workspace_url:
-        description: 'Workspace URL'
+        description: 'Workspace URL (e.g., https://workspace.azure.com)'
         required: true
+        type: string
       cluster_url:
-        description: 'Cluster URL'
+        description: 'Cluster URL (e.g., https://cluster.azure.com)'
         required: true
+        type: string
       cluster_name:
-        description: 'Cluster name'
+        description: 'Cluster name to delete'
         required: true
+        type: string
 
 env:
   # Azure Authentication - Reference secrets and variables
@@ -19,17 +22,36 @@ env:
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
+  CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
+  CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
 
 jobs:
   delete:
     runs-on: ubuntu-latest
     steps:
-      - name: Print inputs (debug)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
-          echo "Workspace URL: ${{ github.event.inputs.workspace_url }}"
-          echo "Cluster URL: ${{ github.event.inputs.cluster_url }}"
-          echo "Cluster name: ${{ github.event.inputs.cluster_name }}"
-          if [ -n "${AZURE_CLIENT_ID}" ]; then echo "Azure credentials are set"; else echo "Azure credentials are not set"; fi
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Print workflow inputs (debug)
+        run: |
+          echo "🔍 Workflow Inputs:"
+          echo "  Workspace URL: ${{ github.event.inputs.workspace_url }}"
+          echo "  Cluster URL: ${{ github.event.inputs.cluster_url }}"
+          echo "  Cluster name: ${{ github.event.inputs.cluster_name }}"
+          echo ""
+          echo "🔐 Azure Authentication Status:"
+          if [ -n "${AZURE_CLIENT_ID}" ]; then echo "  ✓ Azure credentials are set"; else echo "  ✗ Azure credentials are NOT set"; fi
 
       - name: Azure CLI login
         env:
@@ -39,26 +61,22 @@ jobs:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           set -e
-          echo "Authenticating with Azure..."
+          echo "🔐 Authenticating with Azure..."
           az login --service-principal \
             -u "${AZURE_CLIENT_ID}" \
             -p "${AZURE_CLIENT_SECRET}" \
             --tenant "${AZURE_TENANT_ID}"
           az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
-          echo "Azure authentication successful"
+          echo "✓ Azure authentication successful"
 
       - name: Delete cluster
         env:
           WORKSPACE_URL: ${{ github.event.inputs.workspace_url }}
           CLUSTER_URL: ${{ github.event.inputs.cluster_url }}
           CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          set -e
-          echo "Deleting cluster: $CLUSTER_NAME"
-          echo "Workspace URL: $WORKSPACE_URL"
-          echo "Cluster URL: $CLUSTER_URL"
-          
-          # Add your cluster deletion command here
-          # Example using Azure CLI:
-          # az container delete --resource-group <rg-name> --name $CLUSTER_NAME --yes
+          echo "🗑 Starting cluster deletion process..."
+          python delete_cluster.py "${{ github.event.inputs.cluster_name }}" \
+            "${{ github.event.inputs.workspace_url }}" \
+            "${{ secrets.DATABRICKS_TOKEN }}"
