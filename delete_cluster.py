@@ -100,10 +100,6 @@ class ClusterManager:
 
 
 def main() -> None:
-    # Hardcoded credentials
-    WORKSPACE_URL = "https://adb-7405615123955215.15.azuredatabricks.net"
-    DATABRICKS_TOKEN = "dapi4370d9a8fabede25610681bc91c75f2f-3"
-    
     # Get inputs from command line arguments or environment variables
     if len(sys.argv) < 3:
         print("Usage: python delete_cluster.py <cluster_name> <cluster_id> [workspace_id] [subscription_id]")
@@ -113,6 +109,9 @@ def main() -> None:
         print("\nOptional arguments:")
         print("  workspace_id - Workspace ID")
         print("  subscription_id - Azure Subscription ID")
+        print("\nEnvironment variables required:")
+        print("  WORKSPACE_URL - Databricks Workspace URL")
+        print("  DATABRICKS_TOKEN - Databricks API Token")
         sys.exit(1)
 
     cluster_name = sys.argv[1]
@@ -120,11 +119,11 @@ def main() -> None:
     workspace_id = sys.argv[3] if len(sys.argv) > 3 else os.getenv('WORKSPACE_ID', '')
     subscription_id = sys.argv[4] if len(sys.argv) > 4 else os.getenv('SUBSCRIPTION_ID', '')
     
-    workspace_url = WORKSPACE_URL
-    token = DATABRICKS_TOKEN
+    workspace_url = os.getenv('WORKSPACE_URL')
+    token = os.getenv('DATABRICKS_TOKEN')
 
     if not workspace_url or not token:
-        print("❌ Error: workspace_url and token are required")
+        print("❌ Error: WORKSPACE_URL and DATABRICKS_TOKEN environment variables are required")
         sys.exit(1)
 
     print(f"🔍 Starting cluster deletion process for: {cluster_name}\n")
