@@ -15,6 +15,10 @@ on:
         description: 'Cluster name to delete'
         required: true
         type: string
+      subscription_id:
+        description: 'Azure Subscription ID'
+        required: true
+        type: string
 
 env:
   # Azure Authentication - Reference secrets and variables
@@ -25,6 +29,7 @@ env:
   WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
   CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
   CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+  SUBSCRIPTION_ID: ${{ github.event.inputs.subscription_id }}
 
 jobs:
   delete:
@@ -49,6 +54,7 @@ jobs:
           echo "  Workspace ID: ${{ github.event.inputs.workspace_id }}"
           echo "  Cluster ID: ${{ github.event.inputs.cluster_id }}"
           echo "  Cluster name: ${{ github.event.inputs.cluster_name }}"
+          echo "  Subscription ID: ${{ github.event.inputs.subscription_id }}"
           echo ""
           echo "🔐 Azure Authentication Status:"
           if [ -n "${AZURE_CLIENT_ID}" ]; then echo "  ✓ Azure credentials are set"; else echo "  ✗ Azure credentials are NOT set"; fi
@@ -74,6 +80,7 @@ jobs:
           WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
           CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
           CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+          SUBSCRIPTION_ID: ${{ github.event.inputs.subscription_id }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           WORKSPACE_URL: ${{ secrets.WORKSPACE_URL }}
         run: |
@@ -81,4 +88,5 @@ jobs:
           echo "  Workspace ID: ${WORKSPACE_ID}"
           echo "  Cluster ID: ${CLUSTER_ID}"
           echo "  Cluster Name: ${CLUSTER_NAME}"
-          python delete_cluster.py "${CLUSTER_NAME}" "${WORKSPACE_URL}" "${DATABRICKS_TOKEN}"
+          echo "  Subscription ID: ${SUBSCRIPTION_ID}"
+          python delete_cluster.py "${CLUSTER_NAME}" "${WORKSPACE_URL}" "${DATABRICKS_TOKEN}" "${WORKSPACE_ID}" "${CLUSTER_ID}" "${SUBSCRIPTION_ID}"
