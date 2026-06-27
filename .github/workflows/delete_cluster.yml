@@ -1,18 +1,84 @@
 name: Delete Cluster
+
 on:
   workflow_dispatch:
     inputs:
+      workspace_id:
+        description: 'Workspace ID'
+        required: true
+        type: string
+      cluster_id:
+        description: 'Cluster ID'
+        required: true
+        type: string
       cluster_name:
-        description: 'Name of the cluster to delete'
+        description: 'Cluster name to delete'
         required: true
         type: string
 
+env:
+  # Azure Authentication - Reference secrets and variables
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+  CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
+  CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+
 jobs:
-  delete-cluster:
+  delete:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run delete script
-        run: python delete_cluster.py "${{ github.event.inputs.cluster_name }}"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Print workflow inputs (debug)
+        run: |
+          echo "🔍 Workflow Inputs:"
+          echo "  Workspace ID: ${{ github.event.inputs.workspace_id }}"
+          echo "  Cluster ID: ${{ github.event.inputs.cluster_id }}"
+          echo "  Cluster name: ${{ github.event.inputs.cluster_name }}"
+          echo ""
+          echo "🔐 Azure Authentication Status:"
+          if [ -n "${AZURE_CLIENT_ID}" ]; then echo "  ✓ Azure credentials are set"; else echo "  ✗ Azure credentials are NOT set"; fi
+
+      - name: Azure CLI login
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          set -e
+          echo "🔐 Authenticating with Azure..."
+          az login --service-principal \
+            -u "${AZURE_CLIENT_ID}" \
+            -p "${AZURE_CLIENT_SECRET}" \
+            --tenant "${AZURE_TENANT_ID}"
+          az account set --subscription "${AZURE_SUBSCRIPTION_ID}"
+          echo "✓ Azure authentication successful"
+
+      - name: Delete cluster
+        env:
+          WORKSPACE_ID: ${{ github.event.inputs.workspace_id }}
+          CLUSTER_ID: ${{ github.event.inputs.cluster_id }}
+          CLUSTER_NAME: ${{ github.event.inputs.cluster_name }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          WORKSPACE_URL: ${{ secrets.WORKSPACE_URL }}
+        run: |
+          echo "🗑 Starting cluster deletion process..."
+          echo "  Workspace ID: ${WORKSPACE_ID}"
+          echo "  Cluster ID: ${CLUSTER_ID}"
+          echo "  Cluster Name: ${CLUSTER_NAME}"
+          python delete_cluster.py "${CLUSTER_NAME}" "${WORKSPACE_URL}" "${DATABRICKS_TOKEN}"
