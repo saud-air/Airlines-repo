@@ -15,25 +15,19 @@ class ClusterManager:
             "Content-Type": "application/json"
         }
 
-    def cluster_exists(self, cluster_name: str) -> Optional[str]:
-        """Check if a cluster exists and return its cluster_id if found."""
+    def cluster_exists(self, cluster_id: str) -> Optional[Dict[str, Any]]:
+        """Check if a cluster exists and return its details."""
         try:
             response = requests.get(
-                f"{self.workspace_url}/api/2.0/clusters/list",
-                headers=self.headers
+                f"{self.workspace_url}/api/2.0/clusters/get",
+                headers=self.headers,
+                params={"cluster_id": cluster_id}
             )
             response.raise_for_status()
-            clusters = response.json().get('clusters', [])
-            
-            for cluster in clusters:
-                if cluster.get('cluster_name') == cluster_name:
-                    return cluster.get('cluster_id')
-            
-            print(f"❌ Cluster '{cluster_name}' not found")
-            return None
+            return response.json()
         except requests.exceptions.RequestException as e:
             print(f"❌ Error checking cluster existence: {e}")
-            sys.exit(1)
+            return None
 
     def get_cluster_status(self, cluster_id: str) -> str:
         """Get the current status of a cluster."""
@@ -108,12 +102,20 @@ class ClusterManager:
 def main() -> None:
     # Get inputs from command line arguments or environment variables
     if len(sys.argv) < 2:
-        print("Usage: python delete_cluster.py <cluster_name> [workspace_url] [token]")
+        print("Usage: python delete_cluster.py <cluster_name> [workspace_id] [cluster_id] [workspace_url] [token]")
+        print("\nEnvironment variables:")
+        print("  CLUSTER_NAME - Name of the cluster to delete")
+        print("  WORKSPACE_ID - Workspace ID")
+        print("  CLUSTER_ID - Cluster ID")
+        print("  WORKSPACE_URL - Workspace URL")
+        print("  DATABRICKS_TOKEN - Authentication token")
         sys.exit(1)
 
     cluster_name = sys.argv[1]
-    workspace_url = sys.argv[2] if len(sys.argv) > 2 else os.getenv('WORKSPACE_URL')
-    token = sys.argv[3] if len(sys.argv) > 3 else os.getenv('DATABRICKS_TOKEN')
+    workspace_id = sys.argv[2] if len(sys.argv) > 2 else os.getenv('WORKSPACE_ID')
+    cluster_id = sys.argv[3] if len(sys.argv) > 3 else os.getenv('CLUSTER_ID')
+    workspace_url = sys.argv[4] if len(sys.argv) > 4 else os.getenv('WORKSPACE_URL')
+    token = sys.argv[5] if len(sys.argv) > 5 else os.getenv('DATABRICKS_TOKEN')
 
     if not workspace_url or not token:
         print("❌ Error: workspace_url and token are required")
@@ -121,26 +123,37 @@ def main() -> None:
         sys.exit(1)
 
     print(f"🔍 Starting cluster deletion process for: {cluster_name}\n")
+    print(f"📋 Cluster Details:")
+    print(f"  Cluster Name: {cluster_name}")
+    print(f"  Workspace ID: {workspace_id if workspace_id else 'N/A'}")
+    print(f"  Cluster ID: {cluster_id if cluster_id else 'N/A'}")
+    print()
 
     manager = ClusterManager(workspace_url, token)
 
     # Step 1: Check if cluster exists
-    cluster_id = manager.cluster_exists(cluster_name)
-    if not cluster_id:
+    print("🔍 Checking if cluster exists...")
+    cluster_info = manager.cluster_exists(cluster_id)
+    if not cluster_info:
+        print(f"❌ Cluster '{cluster_name}' not found with ID: {cluster_id}")
         sys.exit(1)
-    print(f"✓ Cluster found with ID: {cluster_id}\n")
+    print(f"✓ Cluster found: {cluster_info.get('cluster_name', cluster_name)}")
+    print(f"  Status: {cluster_info.get('state', 'UNKNOWN')}")
+    print()
 
     # Step 2: Unpin if pinned
     print("📌 Checking if cluster is pinned...")
     manager.unpin_cluster(cluster_id)
+    print()
 
     # Step 3: Stop if running
-    print("\n⏹ Checking cluster status...")
+    print("⏹ Checking cluster status and stopping if needed...")
     if not manager.stop_cluster(cluster_id):
         print("⚠ Warning: Could not stop cluster, attempting to delete anyway...")
+    print()
 
     # Step 4: Delete cluster
-    print("\n🗑 Deleting cluster...")
+    print("🗑 Deleting cluster...")
     if manager.delete_cluster(cluster_id):
         print(f"\n✅ Cluster '{cluster_name}' has been successfully deleted!")
     else:
